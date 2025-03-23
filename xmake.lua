@@ -9,7 +9,7 @@ target("AngryBirds")
     set_languages("c99")
     set_rundir(".")
 
-    add_files("src/main.c")
+    add_files("src/*.c")
     add_linkdirs("ext/lib")
     add_includedirs("ext/include")
     add_syslinks("raylib", "gdi32", "msvcrt", "winmm", "user32", "shell32",

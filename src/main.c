@@ -10,59 +10,15 @@
 #include <string.h>
 #include <stdlib.h>
 
-const int WIDTH = 1280;
-const int HEIGHT = 720;
-
-const float BIRD_MASS = 0.8f; // Mass of the bird (kg)
-const float GRAVITY = 9.81f; // Gravitational constant (m/s²)
-const float SLINGSHOT_RIGIDITY = 10.0f; // Rigidity of the spring (N/m)
-const float FRICTION = 0.25f; // Friction divided by mass coefficient
-
-void LinearSpace(float start, float end, int num, float* result)
-{
-    if (num < 1) return;
-    
-    double step = (num > 1) ? (end - start) / (num - 1) : 0.0f;
-    for (int i = 0; i < num; i++) {
-        result[i] = start + i * step;
-    }
-}
-
-float InitialVelocity(float alphaRadians, float l1)
-{
-    float omega = sqrt(SLINGSHOT_RIGIDITY / BIRD_MASS);
-    float v_eject = l1 * omega * sqrt(1 - pow(((BIRD_MASS * GRAVITY) / (l1 * SLINGSHOT_RIGIDITY) * sin(alphaRadians)), 2));
-    return v_eject;
-}
-
-void ThrowBirdFriction(float alpha, float l1, int numValues, Vector2* out, Vector2 start)
-{
-    float v0 = InitialVelocity(alpha, l1);
-    float t_impact = (2 * v0 * sin(alpha)) / GRAVITY;
-
-    float* linearSpace = (float*)malloc(sizeof(float) * numValues);
-    LinearSpace(0, t_impact, numValues, linearSpace);
-
-    for (int i = 0; i < numValues; i++) {
-        float step = linearSpace[i];
-
-        float lambda_xt = v0 * cos(alpha);
-        float lambda_yt = v0 * sin(alpha);
-
-        float x_t = (lambda_xt / FRICTION) * (1 - expf(-FRICTION * step));
-        float y_t = (lambda_yt / FRICTION) * (1 - expf(-FRICTION * step)) - (GRAVITY / FRICTION) * step;
-
-        out[i].x = start.x + x_t;
-        out[i].y = start.y - y_t;
-    }
-
-    free(linearSpace);
-}
+#include "constants.h"
+#include "math_utils.h"
+#include "physics.h"
 
 int main(void)
 {
     InitWindow(WIDTH, HEIGHT, "Oiseaux Pas Content");
     Texture2D bird = LoadTexture("assets/red.png");
+    Texture2D background = LoadTexture("assets/background.jpg");
 
     SetTargetFPS(144);
 
@@ -74,6 +30,9 @@ int main(void)
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(WHITE);
+
+        DrawTextureEx(background, {0, 0}, 0, 1, WHITE);
+        DrawText("Angry Birds Math 2025 - Amelie Heinrich", 20, 20, 30, BLACK);
 
         Vector2 mousePos = GetMousePosition();
         Vector2 pos = { 200.0f, 500.0f };
@@ -112,10 +71,15 @@ int main(void)
             float l1 = sqrt(sqrtee.x + sqrtee.y) / 2.0f;
 
             // Fill the vector list
-            ThrowBirdFriction(angleRadians, l1, 100, debugList, birdCenter);
+            GetPredictedTrajectory(angleRadians, l1, 100, debugList, birdCenter);
             for (int i = 0; i < 99; i++) {
                 DrawLineEx(debugList[i], debugList[i + 1], 5.0f, GREEN);
             }
+
+            // Draw UI
+            char fmt[256];
+            sprintf(fmt, "Angle: %.2f\nLength: %.2f", angleRadians * RAD2DEG, l1);
+            DrawText(fmt, 20, 50, 30, BLACK);
         } else {
             startDrag = 0;
         }
